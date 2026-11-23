@@ -14,9 +14,9 @@ export function merchantLabel(merchantId: number, name?: string | null): string 
   return name?.trim() || `Merchant #${merchantId}`;
 }
 
-/** Platform SaaS › Companies Hub */
+/** Platform SaaS */
 export function companiesTrail(): SaasCrumb[] {
-  return [{ label: 'Platform SaaS' }, { label: 'Companies Hub', to: platformSaasPaths.companiesHub() }];
+  return [{ label: 'Platform SaaS' }];
 }
 
 /** … › Companies Directory › <Company> */

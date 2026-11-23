@@ -351,11 +351,6 @@ export const OnlineOrderSetupDrawer: React.FC<OnlineOrderSetupDrawerProps> = ({
       return;
     }
 
-    if (!paymentStatus) {
-      setFormError('Please select a payment status.');
-      return;
-    }
-
     if (!fulfillmentStatus) {
       setFormError('Please select an initial fulfillment status.');
       return;
@@ -387,7 +382,7 @@ export const OnlineOrderSetupDrawer: React.FC<OnlineOrderSetupDrawerProps> = ({
         storeId: Number(storeId),
         customerId: Number(customerId),
         type,
-        paymentStatus,
+        paymentStatus: paymentStatus || 'pending',
         fulfillmentStatus,
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         notes: notes.trim() ? notes.trim() : null,
@@ -580,14 +575,14 @@ export const OnlineOrderSetupDrawer: React.FC<OnlineOrderSetupDrawerProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Order Type & Payment Status (Single line: 2 columns) */}
+          {/* Section 2: Order Type */}
           <div className="bg-white p-5 rounded-xl border border-[#e8e2d8] shadow-xs space-y-4">
             <div className="flex items-center gap-2 text-xs font-bold text-[#8c857b] uppercase tracking-wider border-b border-[#f2ede5] pb-2">
-              <span className="material-symbols-outlined text-[#ae001a] text-base">payments</span>
-              <span>Type & Payment Parameters</span>
+              <span className="material-symbols-outlined text-[#ae001a] text-base">local_shipping</span>
+              <span>Order Type</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div>
               {/* Order Type Selector */}
               <div>
                 <label className="block text-xs font-bold text-[#1d1c17] mb-1.5 uppercase tracking-wider">
@@ -641,35 +636,6 @@ export const OnlineOrderSetupDrawer: React.FC<OnlineOrderSetupDrawerProps> = ({
                 </div>
                 <p className="text-[10px] text-[#8c857b] mt-1">
                   Online order fulfillment channel.
-                </p>
-              </div>
-
-              {/* Payment Status Selector */}
-              <div>
-                <label className="block text-xs font-bold text-[#1d1c17] mb-1.5 uppercase tracking-wider">
-                  Payment Status <span className="text-[#ae001a]">*</span>
-                </label>
-                <select
-                  value={paymentStatus}
-                  onChange={(e) =>
-                    setPaymentStatus(
-                      e.target.value as 'pending' | 'paid' | 'failed' | 'refunded' | ''
-                    )
-                  }
-                  disabled={isSubmitting}
-                  className="w-full h-10 px-3 bg-white border border-[#d5cfc4] rounded-lg text-xs font-medium text-[#1d1c17] focus:outline-none focus:border-[#ae001a] focus:ring-1 focus:ring-[#ae001a] transition-colors cursor-pointer"
-                  required
-                >
-                  <option value="" disabled>
-                    Select payment status...
-                  </option>
-                  <option value="paid">PAID (Settled via Gateway)</option>
-                  <option value="pending">PENDING (Pay at Counter / Delivery)</option>
-                  <option value="failed">FAILED (Gateway Card Decline)</option>
-                  <option value="refunded">REFUNDED (Reversed Transaction)</option>
-                </select>
-                <p className="text-[10px] text-[#8c857b] mt-1">
-                  Financial gateway balance state.
                 </p>
               </div>
             </div>

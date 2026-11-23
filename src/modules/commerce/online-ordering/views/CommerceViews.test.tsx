@@ -169,7 +169,7 @@ const ORDER_ITEMS = [
     onlineOrderId: 10,
     productId: 6,
     variantId: null,
-    orderItemId: null,
+    orderItemId: 102,
     quantity: 1,
     unitPrice: 4.5,
     modifiers: null,
@@ -246,13 +246,15 @@ describe('OnlineOrderItemsView', () => {
 
     expect(await screen.findByText('#ORI-1')).toBeInTheDocument();
     expect(screen.getByText('Classic Burger', { selector: 'div' })).toBeInTheDocument();
+    expect(screen.getByText('#ORI-2')).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Filter by status'), 'active');
     expect(screen.queryByText('#ORI-2')).not.toBeInTheDocument();
     expect(calledRoutes(fetchMock)).toEqual(
       expect.arrayContaining(['GET /online-order-items']),
     );
   });
 
-  it('reveals deleted line items when the DELETED logical status checkbox is checked', async () => {
+  it('filters deleted line items when Deleted is selected in status dropdown', async () => {
     stub({
       '/online-order-items': { data: ORDER_ITEMS },
       '/online-orders': { data: [{ id: 10, customer: { name: 'Alice' } }] },
@@ -262,10 +264,10 @@ describe('OnlineOrderItemsView', () => {
     render(<OnlineOrderItemsView />);
 
     expect(await screen.findByText('#ORI-1')).toBeInTheDocument();
-    const deletedCheckbox = screen.getByLabelText('DELETED');
-    await userEvent.click(deletedCheckbox);
+    await userEvent.selectOptions(screen.getByLabelText('Filter by status'), 'deleted');
 
     expect(await screen.findByText('#ORI-2')).toBeInTheDocument();
+    expect(screen.queryByText('#ORI-1')).not.toBeInTheDocument();
     expect(screen.getByText('Cola Soda', { selector: 'div' })).toBeInTheDocument();
   });
 

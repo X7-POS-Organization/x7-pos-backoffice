@@ -305,6 +305,19 @@ const OnlineOrderItemSetupDrawerContent: React.FC<ContentProps> = ({
       }
     }
 
+    // Auto-include uncommitted draft tag if user typed in key/value without clicking "+ Add Tag"
+    if (modifierEditorMode === 'visual' && newTagKey.trim()) {
+      const trimmedVal = newTagValue.trim() || 'true';
+      let coercedVal: unknown = trimmedVal;
+      if (trimmedVal.toLowerCase() === 'true') coercedVal = true;
+      else if (trimmedVal.toLowerCase() === 'false') coercedVal = false;
+      else if (!isNaN(Number(trimmedVal)) && trimmedVal !== '') coercedVal = Number(trimmedVal);
+      parsedModifiers = {
+        ...(parsedModifiers ?? {}),
+        [newTagKey.trim()]: coercedVal,
+      };
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit({
@@ -468,31 +481,31 @@ const OnlineOrderItemSetupDrawerContent: React.FC<ContentProps> = ({
 
           {/* 3. Modifiers JSON Inspector & Visual Tree / Tag Editor */}
           <div className="bg-white p-4 rounded-xl border border-[#e8e2d8] shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#1d1c17]">
                   Modifiers JSON Inspector & Tag Editor
                 </label>
-                <p className="text-[11px] text-[#5f5e5e]">
+                <p className="text-[11px] text-[#5f5e5e] mt-0.5">
                   Structured JSONB payload for customized toppings, sizing, and dressing options.
                 </p>
               </div>
 
               {/* Mode Switcher & Insert Sample */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={handleInsertSample}
-                  className="text-[11px] font-semibold text-[#ae001a] hover:underline cursor-pointer"
+                  className="text-[11px] font-semibold text-[#ae001a] hover:underline cursor-pointer whitespace-nowrap px-1.5 py-1 rounded hover:bg-[#ae001a]/5 transition-colors"
                   title="Insert sample modifier payload"
                 >
                   Sample
                 </button>
-                <div className="flex items-center bg-[#f2ede5] p-0.5 rounded-md border border-[#e8e2d8]">
+                <div className="flex items-center bg-[#f2ede5] p-0.5 rounded-md border border-[#e8e2d8] shrink-0">
                   <button
                     type="button"
                     onClick={handleSwitchToVisual}
-                    className={`px-2.5 py-1 text-[11px] font-bold rounded transition-colors cursor-pointer ${
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded transition-colors cursor-pointer whitespace-nowrap ${
                       modifierEditorMode === 'visual'
                         ? 'bg-white text-[#1d1c17] shadow-2xs'
                         : 'text-[#5f5e5e] hover:text-[#1d1c17]'
@@ -503,7 +516,7 @@ const OnlineOrderItemSetupDrawerContent: React.FC<ContentProps> = ({
                   <button
                     type="button"
                     onClick={() => setModifierEditorMode('json')}
-                    className={`px-2.5 py-1 text-[11px] font-bold rounded transition-colors cursor-pointer ${
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded transition-colors cursor-pointer whitespace-nowrap ${
                       modifierEditorMode === 'json'
                         ? 'bg-white text-[#1d1c17] shadow-2xs'
                         : 'text-[#5f5e5e] hover:text-[#1d1c17]'
@@ -642,7 +655,14 @@ const OnlineOrderItemSetupDrawerContent: React.FC<ContentProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-white p-4 border-t border-[#e8e2d8] flex items-center justify-between gap-3 shrink-0">
+        <div className="bg-white border-t border-[#e8e2d8] shrink-0">
+          {formError && (
+            <div className="mx-4 mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm shrink-0">error</span>
+              <span>{formError}</span>
+            </div>
+          )}
+          <div className="p-4 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
@@ -662,6 +682,7 @@ const OnlineOrderItemSetupDrawerContent: React.FC<ContentProps> = ({
             </span>
             <span>{isSubmitting ? 'Saving...' : mode === 'create' ? 'Create Line Item' : 'Update Line Item'}</span>
           </button>
+          </div>
         </div>
       </form>
     </SideDrawer>

@@ -3,23 +3,20 @@ import { companiesNav, companyNav, merchantNav } from '@/modules/platform-saas/c
 
 describe('saas nav destinations', () => {
   it('companies level points the company modules to the context company', () => {
-    const items = companiesNav('companies-hub', 7);
+    const items = companiesNav('companies-directory', 7);
     expect(items.map((i) => [i.label, i.to, i.active])).toEqual([
-      ['Companies Hub', '/platform-saas/companies/hub', true],
-      ['Companies Directory', '/platform-saas/companies/directory', false],
+      ['Companies Directory', '/platform-saas/companies/directory', true],
       ['Company Profile', '/platform-saas/companies/7/profile', false],
       ['Company Configuration', '/platform-saas/companies/7/configuration', false],
       ['Company Merchants', '/platform-saas/companies/7/merchants', false],
     ]);
     expect(companiesNav('companies-directory', null).filter((i) => i.to).map((i) => i.id)).toEqual([
-      'companies-hub',
       'companies-directory',
     ]);
   });
 
   it('company and merchant levels list their sibling views', () => {
     expect(companyNav(3, 'company-profile').map((i) => [i.to, i.active])).toEqual([
-      ['/platform-saas/companies/3/hub', false],
       ['/platform-saas/companies/3/profile', true],
       ['/platform-saas/companies/3/configuration', false],
       ['/platform-saas/companies/3/merchants', false],

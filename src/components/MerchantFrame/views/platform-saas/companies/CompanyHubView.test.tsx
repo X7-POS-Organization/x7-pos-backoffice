@@ -67,6 +67,12 @@ describe('CompanyHubView', () => {
     expect(screen.getByTestId('location')).toHaveTextContent(path);
   });
 
+  it('does not render the bottom NavHubBar on the Command Hub', async () => {
+    renderHub();
+    await waitFor(() => expect(screen.getByTestId('stat-total-merchants')).toHaveTextContent('6'));
+    expect(screen.queryByRole('navigation', { name: 'Platform SaaS navigation' })).not.toBeInTheDocument();
+  });
+
   it('shows an error when the company cannot be loaded', async () => {
     vi.mocked(getSaasCompanyHub).mockRejectedValueOnce(new Error('Company not found'));
     renderHub();

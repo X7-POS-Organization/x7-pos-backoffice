@@ -97,14 +97,6 @@ export const CompaniesDirectoryView: React.FC = () => {
         icon="domain"
         title="COMPANIES DIRECTORY"
         description="Every enterprise tenant registered on the platform. Filter by status, subscription tier or search by name, legal name, tax ID or email, then open the company's hub."
-        actions={[
-          {
-            label: 'Back to Companies Hub',
-            icon: 'arrow_back',
-            variant: 'secondary',
-            onClick: () => navigate(platformSaasPaths.companiesHub()),
-          },
-        ]}
       />
 
       <SaasPanel title="Registered Companies" metaTestId="companies-count" meta={isLoading && !meta ? '...' : `${meta?.total ?? visibleRows.length} companies`}>
@@ -260,7 +252,7 @@ export const CompaniesDirectoryView: React.FC = () => {
           </div>
         )}
       </SaasPanel>
-      <SaasNavBar backLabel="Back to Companies Hub" backTo={platformSaasPaths.companiesHub()} items={companiesNav('companies-directory', getRememberedCompanyContext())} />
+      <SaasNavBar backLabel="Back to Platform SaaS Dashboard" backTo="/dashboard" items={companiesNav('companies-directory', getRememberedCompanyContext())} />
     </div>
   );
 };

@@ -86,7 +86,6 @@ import { GlobalUsersDirectoryView } from '@/modules/platform-saas/users/views/Gl
 import { CompanyProfileView } from '@/modules/platform-saas/companies/views/CompanyProfileView';
 import { CompanyConfigurationsView } from '@/modules/platform-saas/companies/views/CompanyConfigurationsView';
 import { CompanyRegistryView } from '@/modules/platform-saas/companies/views/CompanyRegistryView';
-import { CompaniesHubView } from '@/components/MerchantFrame/views/platform-saas/companies/CompaniesHubView';
 import { CompaniesDirectoryView } from '@/components/MerchantFrame/views/platform-saas/companies/CompaniesDirectoryView';
 import { CompanyHubView } from '@/components/MerchantFrame/views/platform-saas/companies/CompanyHubView';
 import { CompanyProfileView as SaasCompanyProfileView } from '@/components/MerchantFrame/views/platform-saas/companies/CompanyProfileView';
@@ -252,7 +251,7 @@ view(['companies', 'company-registry', 'companies-registry'], () => <CompanyRegi
 const missing = (ctx: MerchantViewContext, entity: string) => (
   <SaasMissingContext entity={entity} onPick={() => ctx.navigateToPath?.(platformSaasPaths.companiesDirectory())} />
 );
-view(PLATFORM_SAAS_TABS.companiesHub, () => <CompaniesHubView />);
+view(PLATFORM_SAAS_TABS.companiesHub, () => <CompaniesDirectoryView />);
 view(PLATFORM_SAAS_TABS.companiesDirectory, () => <CompaniesDirectoryView />);
 view(PLATFORM_SAAS_TABS.companyHub, (ctx) => {
   const companyId = ctx.routeParams?.companyId;

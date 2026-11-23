@@ -572,7 +572,7 @@ export const MerchantFrame: React.FC = () => {
           if (menu.length > 0) {
             const directTargets: Record<string, string> = {
               'central-backoffice': 'saas-dashboard',
-              'saas-companies': PLATFORM_SAAS_TABS.companiesHub,
+              'saas-companies': PLATFORM_SAAS_TABS.companiesDirectory,
               'saas-merchants': 'global-merchants-directory',
               'saas-users': 'users-auth-profiles',
               'client-backoffice': 'dashboard',
@@ -1060,7 +1060,7 @@ export const MerchantFrame: React.FC = () => {
 
                         const DIRECT_APP_TARGETS: Record<string, string> = {
                           'central-backoffice': 'saas-dashboard',
-                          'saas-companies': PLATFORM_SAAS_TABS.companiesHub,
+                          'saas-companies': PLATFORM_SAAS_TABS.companiesDirectory,
                           'saas-merchants': 'global-merchants-directory',
                           'saas-users': 'users-auth-profiles',
                           'client-backoffice': 'dashboard',

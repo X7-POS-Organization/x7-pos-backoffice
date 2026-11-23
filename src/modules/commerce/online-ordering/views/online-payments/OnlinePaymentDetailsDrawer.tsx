@@ -120,7 +120,8 @@ export const OnlinePaymentDetailsDrawer: React.FC<OnlinePaymentDetailsDrawerProp
       subtitle="Gateway transaction token, settlement status, and relational web order binding"
       maxWidth={540}
     >
-      <div className="flex flex-col gap-5 p-1 font-sans">
+      <div className="flex flex-col flex-1 min-h-0 font-sans">
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
         {/* Top Banner: Order Link & Logical Status */}
         <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f8f5ee] border border-[#e8e2d8] rounded-xl p-3.5">
           <div className="flex flex-col gap-0.5">
@@ -414,9 +415,10 @@ export const OnlinePaymentDetailsDrawer: React.FC<OnlinePaymentDetailsDrawerProp
             </span>
           </div>
         </div>
+        </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#e8e2d8]">
+        <div className="bg-white px-6 py-4 border-t border-[#e8e2d8] flex items-center justify-between gap-2 shrink-0">
           {isDeleted ? (
             <button
               type="button"

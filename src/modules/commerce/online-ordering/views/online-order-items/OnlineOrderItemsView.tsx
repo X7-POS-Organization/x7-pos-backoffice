@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { getAccessToken, clearAuthSession } from '@/platform/auth/lib/auth-storage';
-import { API_BASE } from '@/shared/api/http';
+import { API_BASE, authHeaders } from '@/shared/api/http';
 import {
   OnlineOrderItemDetailsDrawer,
   type OnlineOrderItemData,
@@ -19,6 +19,7 @@ import {
   NoColumnsEmptyState,
   type TableDensity,
 } from '@/shared/components/TableOptionsMenu';
+import { ConfirmStatusToggleDialog } from '@/shared/components/StatusToggle';
 
 interface OnlineOrderItemsViewProps {
   onNavigate?: (view: string) => void;
@@ -43,8 +44,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
   const [kitchenStatusFilter, setKitchenStatusFilter] = useState<KitchenStatusFilter>('all');
   const [mappingFilter, setMappingFilter] = useState<MappingFilter>('all');
   const [selectedStageStatuses, setSelectedStageStatuses] = useState<string[]>([]);
-  const [showActiveStatus, setShowActiveStatus] = useState<boolean>(true);
-  const [showDeletedStatus, setShowDeletedStatus] = useState<boolean>(false);
+  const [logicalStatusFilter, setLogicalStatusFilter] = useState<'all' | 'active' | 'deleted'>('all');
   const [viewMode, setViewMode] = useState<'split' | 'table'>('split');
 
   // Auto-refresh controls
@@ -73,6 +73,8 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
   const [isSetupDrawerOpen, setIsSetupDrawerOpen] = useState<boolean>(false);
   const [setupMode, setSetupMode] = useState<'create' | 'edit'>('create');
   const [itemToEdit, setItemToEdit] = useState<OnlineOrderItemData | null>(null);
+  const [itemToVoid, setItemToVoid] = useState<OnlineOrderItemData | null>(null);
+  const [isVoiding, setIsVoiding] = useState<boolean>(false);
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -87,10 +89,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
     if (!token) return;
 
     try {
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      };
+      const headers = authHeaders(true);
 
       const [ordersRes, productsRes, variantsRes] = await Promise.all([
         fetch(`${API_BASE}/online-orders?limit=100`, { headers }).catch(() => null),
@@ -172,10 +171,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
         });
 
         const res = await fetch(`${API_BASE}/online-order-items?${queryParams.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders(true),
         });
 
         if (res.status === 401) {
@@ -271,8 +267,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
     kitchenStatusFilter !== 'all' ||
     mappingFilter !== 'all' ||
     selectedStageStatuses.length > 0 ||
-    !showActiveStatus ||
-    showDeletedStatus
+    logicalStatusFilter !== 'all'
   );
 
   const handleResetAllFilters = () => {
@@ -282,18 +277,17 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
     setKitchenStatusFilter('all');
     setMappingFilter('all');
     setSelectedStageStatuses([]);
-    setShowActiveStatus(true);
-    setShowDeletedStatus(false);
+    setLogicalStatusFilter('all');
     setCurrentPage(1);
   };
 
   // Filter items in memory
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      // Logical status checkboxes filter (ACTIVE / DELETED)
+      // Logical status filter (active / deleted / all)
       const isDeleted = item.status === 'deleted';
-      if (isDeleted && !showDeletedStatus) return false;
-      if (!isDeleted && !showActiveStatus) return false;
+      if (logicalStatusFilter === 'active' && isDeleted) return false;
+      if (logicalStatusFilter === 'deleted' && !isDeleted) return false;
 
       // Mapping filter
       if (mappingFilter === 'mapped' && !item.orderItemId) return false;
@@ -354,8 +348,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
     });
   }, [
     items,
-    showActiveStatus,
-    showDeletedStatus,
+    logicalStatusFilter,
     mappingFilter,
     selectedOrderFilter,
     selectedProductFilter,
@@ -364,6 +357,12 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
     searchQuery,
     orders,
   ]);
+
+  // Only items from accepted/POS-linked orders appear on the kitchen Stage Board
+  const boardItems = useMemo(
+    () => filteredItems.filter((i) => i.orderItemId != null),
+    [filteredItems]
+  );
 
   // Operational KPI Calculations (strictly active line items)
   const activeItems = useMemo(() => items.filter((i) => i.status !== 'deleted'), [items]);
@@ -412,12 +411,6 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
     setIsDetailDrawerOpen(true);
   };
 
-  const handleOpenCreate = () => {
-    setItemToEdit(null);
-    setSetupMode('create');
-    setIsSetupDrawerOpen(true);
-  };
-
   const handleOpenEdit = (item: OnlineOrderItemData) => {
     setItemToEdit(item);
     setSetupMode('edit');
@@ -431,10 +424,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
 
     const res = await fetch(`${API_BASE}/online-order-items/${itemId}`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders(true),
       body: JSON.stringify({ kitchenLineStatus: newStatus }),
     });
 
@@ -453,21 +443,27 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
     if (!token) return;
 
     const isEdit = setupMode === 'edit' && formData.id;
+    const isLinkedToPos = Boolean(isEdit && itemToEdit?.orderItemId);
     const url = isEdit
       ? `${API_BASE}/online-order-items/${formData.id}`
       : `${API_BASE}/online-order-items`;
-    const method = isEdit ? 'PATCH' : 'POST';
+    const method = isEdit ? 'PUT' : 'POST';
 
-    const payload: Record<string, unknown> = {
-      onlineOrderId: formData.onlineOrderId,
-      productId: formData.productId,
-      variantId: formData.variantId || null,
-      quantity: formData.quantity,
-      modifiers: formData.modifiers || null,
-      notes: formData.notes || null,
-    };
+    const payload: Record<string, unknown> = isLinkedToPos
+      ? {
+          modifiers: formData.modifiers || null,
+          notes: formData.notes || null,
+        }
+      : {
+          onlineOrderId: formData.onlineOrderId,
+          productId: formData.productId,
+          variantId: formData.variantId || null,
+          quantity: formData.quantity,
+          modifiers: formData.modifiers || null,
+          notes: formData.notes || null,
+        };
     if (formData.kitchenLineStatus) {
-      payload.kitchenLineStatus = formData.kitchenLineStatus;
+      payload.kitchenLineStatus = formData.kitchenLineStatus.toLowerCase();
     }
     if (formData.status) {
       payload.status = formData.status;
@@ -475,10 +471,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
 
     const res = await fetch(url, {
       method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders(true),
       body: JSON.stringify(payload),
     });
 
@@ -492,18 +485,20 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
   };
 
   // Void / Soft-Delete Line Item
-  const handleDeleteItem = async (item: OnlineOrderItemData) => {
-    if (!confirm(`Are you sure you want to void line item #ORI-${item.id}? This will remove it from active KDS kitchen screens while preserving historical records.`)) return;
+  const handleDeleteItem = (item: OnlineOrderItemData) => {
+    setItemToVoid(item);
+  };
 
+  const executeVoidItem = async () => {
+    if (!itemToVoid) return;
     const token = getAccessToken();
     if (!token) return;
 
+    setIsVoiding(true);
     try {
-      const res = await fetch(`${API_BASE}/online-order-items/${item.id}`, {
+      const res = await fetch(`${API_BASE}/online-order-items/${itemToVoid.id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: authHeaders(false),
       });
 
       if (!res.ok) {
@@ -511,12 +506,15 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
         throw new Error(errJson?.message || 'Failed to void item');
       }
 
-      showToast(`Line item #ORI-${item.id} voided and synced to KDS`);
+      showToast(`Line item #ORI-${itemToVoid.id} voided and synced to KDS`);
+      setItemToVoid(null);
       setIsDetailDrawerOpen(false);
       void fetchItems(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error voiding item';
-      alert(msg);
+      showToast(msg);
+    } finally {
+      setIsVoiding(false);
     }
   };
 
@@ -527,11 +525,8 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
 
     try {
       const res = await fetch(`${API_BASE}/online-order-items/${item.id}`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        method: 'PUT',
+        headers: authHeaders(true),
         body: JSON.stringify({ status: 'active' }),
       });
 
@@ -545,7 +540,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
       void fetchItems(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error restoring item';
-      alert(msg);
+      showToast(msg);
     }
   };
 
@@ -953,37 +948,6 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
             </select>
           </div>
 
-          {/* Logical Status Checkboxes (ACTIVE / DELETED) */}
-          <div className="flex items-center gap-3 h-[34px] px-3 bg-[#fcfcfb] rounded-lg border border-[#d5cfc4] shrink-0">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#76736a] font-poppins">
-              Status:
-            </span>
-            <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1d1c17] cursor-pointer select-none font-poppins hover:text-[#ae001a] transition-colors duration-200">
-              <input
-                type="checkbox"
-                checked={showActiveStatus}
-                onChange={(e) => {
-                  setShowActiveStatus(e.target.checked);
-                  setCurrentPage(1);
-                }}
-                className="w-3.5 h-3.5 rounded border-[#d5cfc4] text-[#ae001a] focus:ring-[#ae001a] accent-[#ae001a] cursor-pointer"
-              />
-              <span>ACTIVE</span>
-            </label>
-            <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1d1c17] cursor-pointer select-none font-poppins hover:text-[#ae001a] transition-colors duration-200">
-              <input
-                type="checkbox"
-                checked={showDeletedStatus}
-                onChange={(e) => {
-                  setShowDeletedStatus(e.target.checked);
-                  setCurrentPage(1);
-                }}
-                className="w-3.5 h-3.5 rounded border-[#d5cfc4] text-[#ae001a] focus:ring-[#ae001a] accent-[#ae001a] cursor-pointer"
-              />
-              <span>DELETED</span>
-            </label>
-          </div>
-
           {/* Reset All Filters Button */}
           {hasActiveFilters && (
             <button
@@ -1117,38 +1081,51 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
             <button
               type="button"
               onClick={() => {
-                setShowDeletedStatus((prev) => !prev);
+                setLogicalStatusFilter((prev) => (prev === 'deleted' ? 'active' : 'deleted'));
                 setCurrentPage(1);
               }}
               className={`h-[30px] px-2.5 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 font-sans font-poppins whitespace-nowrap border ${
-                kpiVoided > 0 || showDeletedStatus
+                kpiVoided > 0 || logicalStatusFilter === 'deleted'
                   ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
                   : 'bg-white hover:bg-zinc-50 text-zinc-600 border-zinc-200'
               }`}
               title="Toggle archived / voided lines"
             >
-              <span className={`material-symbols-outlined text-[15px] ${kpiVoided > 0 || showDeletedStatus ? 'text-red-600' : 'text-zinc-400'}`}>
+              <span className={`material-symbols-outlined text-[15px] ${kpiVoided > 0 || logicalStatusFilter === 'deleted' ? 'text-red-600' : 'text-zinc-400'}`}>
                 archive
               </span>
               <span>Voided</span>
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
-                  kpiVoided > 0 || showDeletedStatus ? 'bg-red-200 text-red-900' : 'bg-zinc-100 text-zinc-600'
+                  kpiVoided > 0 || logicalStatusFilter === 'deleted' ? 'bg-red-200 text-red-900' : 'bg-zinc-100 text-zinc-600'
                 }`}
               >
                 {kpiVoided}
               </span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              className="h-[30px] px-3 bg-[#ae001a] hover:bg-[#d2272f] text-white text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 font-sans font-poppins whitespace-nowrap"
-              title="Create new online order item"
-            >
-              <span className="material-symbols-outlined text-[15px]">add</span>
-              <span>New Item</span>
-            </button>
+            {/* Status Filter Dropdown (matching CategoriesView) */}
+            <div className="flex items-center gap-1.5 text-xs text-[#5f5e5e] shrink-0">
+              <span className="material-symbols-outlined text-base">tune</span>
+              <div className="relative flex items-center">
+                <select
+                  aria-label="Filter by status"
+                  value={logicalStatusFilter}
+                  onChange={(e) => {
+                    setLogicalStatusFilter(e.target.value as 'all' | 'active' | 'deleted');
+                    setCurrentPage(1);
+                  }}
+                  className="appearance-none h-[30px] pl-2.5 pr-7 bg-[#fcfcfb] rounded-lg border border-[#d5cfc4] text-[11px] font-semibold focus:border-[#ae001a] outline-none font-poppins text-[#1d1c17] cursor-pointer"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="deleted">Deleted</option>
+                </select>
+                <span className="material-symbols-outlined text-[15px] text-[#5f5e5e] pointer-events-none absolute right-2">
+                  expand_more
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1182,12 +1159,12 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
                   <span className="truncate">PENDING PREP</span>
                 </div>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-white text-sky-800 border border-sky-200 shrink-0">
-                  {filteredItems.filter((i) => (i.kitchenLineStatus || 'PENDING').toUpperCase() === 'PENDING').length}
+                  {boardItems.filter((i) => (i.kitchenLineStatus || 'PENDING').toUpperCase() === 'PENDING').length}
                 </span>
               </div>
 
               <div className="p-2 sm:p-2.5 space-y-2.5 min-h-[400px] overflow-y-auto max-h-[calc(100vh-320px)]">
-                {filteredItems
+                {boardItems
                   .filter((i) => (i.kitchenLineStatus || 'PENDING').toUpperCase() === 'PENDING')
                   .map((item) => (
                     <KanbanItemCard
@@ -1205,7 +1182,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
                     />
                   ))}
 
-                {filteredItems.filter((i) => (i.kitchenLineStatus || 'PENDING').toUpperCase() === 'PENDING').length === 0 && (
+                {boardItems.filter((i) => (i.kitchenLineStatus || 'PENDING').toUpperCase() === 'PENDING').length === 0 && (
                   <div className="py-12 text-center text-xs text-[#8c857b] italic font-sans">
                     No lines pending preparation
                   </div>
@@ -1221,12 +1198,12 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
                   <span className="truncate">COOKING</span>
                 </div>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-white text-amber-800 border border-amber-200 shrink-0">
-                  {filteredItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'IN_PREPARATION').length}
+                  {boardItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'IN_PREPARATION').length}
                 </span>
               </div>
 
               <div className="p-2 sm:p-2.5 space-y-2.5 min-h-[400px] overflow-y-auto max-h-[calc(100vh-320px)]">
-                {filteredItems
+                {boardItems
                   .filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'IN_PREPARATION')
                   .map((item) => (
                     <KanbanItemCard
@@ -1244,7 +1221,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
                     />
                   ))}
 
-                {filteredItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'IN_PREPARATION').length === 0 && (
+                {boardItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'IN_PREPARATION').length === 0 && (
                   <div className="py-12 text-center text-xs text-[#8c857b] italic font-sans">
                     No lines currently cooking
                   </div>
@@ -1260,12 +1237,12 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
                   <span className="truncate">LINE READY</span>
                 </div>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-white text-emerald-800 border border-emerald-200 shrink-0">
-                  {filteredItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'READY').length}
+                  {boardItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'READY').length}
                 </span>
               </div>
 
               <div className="p-2 sm:p-2.5 space-y-2.5 min-h-[400px] overflow-y-auto max-h-[calc(100vh-320px)]">
-                {filteredItems
+                {boardItems
                   .filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'READY')
                   .map((item) => (
                     <KanbanItemCard
@@ -1283,7 +1260,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
                     />
                   ))}
 
-                {filteredItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'READY').length === 0 && (
+                {boardItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'READY').length === 0 && (
                   <div className="py-12 text-center text-xs text-[#8c857b] italic font-sans">
                     No lines waiting for dispatch
                   </div>
@@ -1299,12 +1276,12 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
                   <span className="truncate">SERVED</span>
                 </div>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-white text-purple-800 border border-purple-200 shrink-0">
-                  {filteredItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'SERVED').length}
+                  {boardItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'SERVED').length}
                 </span>
               </div>
 
               <div className="p-2 sm:p-2.5 space-y-2.5 min-h-[400px] overflow-y-auto max-h-[calc(100vh-320px)]">
-                {filteredItems
+                {boardItems
                   .filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'SERVED')
                   .map((item) => (
                     <KanbanItemCard
@@ -1322,7 +1299,7 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
                     />
                   ))}
 
-                {filteredItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'SERVED').length === 0 && (
+                {boardItems.filter((i) => (i.kitchenLineStatus || '').toUpperCase() === 'SERVED').length === 0 && (
                   <div className="py-12 text-center text-xs text-[#8c857b] italic font-sans">
                     No served order lines
                   </div>
@@ -1795,6 +1772,19 @@ export const OnlineOrderItemsView: React.FC<OnlineOrderItemsViewProps> = ({ onNa
         }}
         onSubmit={handleSetupSubmit}
       />
+
+      {itemToVoid && (
+        <ConfirmStatusToggleDialog
+          entityName={`#ORI-${itemToVoid.id} (${itemToVoid.product?.name || 'Line Item'})`}
+          direction="deactivate"
+          submitting={isVoiding}
+          description={`Voiding "#ORI-${itemToVoid.id} (${itemToVoid.product?.name || 'Line Item'})" will remove it from active KDS kitchen screens while preserving historical records.`}
+          onConfirm={executeVoidItem}
+          onClose={() => {
+            if (!isVoiding) setItemToVoid(null);
+          }}
+        />
+      )}
     </div>
   );
 };

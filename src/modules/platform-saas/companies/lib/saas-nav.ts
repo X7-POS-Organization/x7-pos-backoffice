@@ -21,14 +21,13 @@ export type MerchantNavId = 'merchant-hub' | 'merchant-profile' | 'merchant-user
 const mark = <T extends string>(items: Array<SaasNavDestination & { id: T }>, active?: T) =>
   items.map((item) => ({ ...item, active: item.id === active }));
 
-/** Companies Hub y Companies Directory: los módulos de company apuntan a la company de contexto. */
+/** Companies Directory: los módulos de company apuntan a la company de contexto. */
 export function companiesNav(active: CompaniesNavId, contextCompanyId: number | null): SaasNavDestination[] {
   const ctx = contextCompanyId;
   return mark<CompaniesNavId>(
     [
-      { id: 'companies-hub', label: 'Companies Hub', icon: 'hub', to: platformSaasPaths.companiesHub() },
       { id: 'companies-directory', label: 'Companies Directory', icon: 'domain', to: platformSaasPaths.companiesDirectory() },
-      { id: 'company-profile', label: 'Company Profile', icon: 'business', to: ctx ? platformSaasPaths.companyProfile(ctx) : null },
+      { id: 'company-profile', label: 'Company Profile', icon: 'badge', to: ctx ? platformSaasPaths.companyProfile(ctx) : null },
       {
         id: 'company-configuration',
         label: 'Company Configuration',
@@ -41,12 +40,11 @@ export function companiesNav(active: CompaniesNavId, contextCompanyId: number | 
   );
 }
 
-/** Vistas de una company concreta: su hub, perfil, configuración y directorio de merchants. */
+/** Vistas de una company concreta: perfil, configuración y directorio de merchants. */
 export function companyNav(companyId: number, active: CompanyNavId): SaasNavDestination[] {
   return mark<CompanyNavId>(
     [
-      { id: 'company-hub', label: 'Company Hub', icon: 'hub', to: platformSaasPaths.companyHub(companyId) },
-      { id: 'company-profile', label: 'Company Profile', icon: 'business', to: platformSaasPaths.companyProfile(companyId) },
+      { id: 'company-profile', label: 'Company Profile', icon: 'badge', to: platformSaasPaths.companyProfile(companyId) },
       {
         id: 'company-configuration',
         label: 'Company Configuration',

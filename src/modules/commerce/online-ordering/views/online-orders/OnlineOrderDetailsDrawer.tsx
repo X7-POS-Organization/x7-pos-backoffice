@@ -111,10 +111,6 @@ interface OnlineOrderDetailsDrawerProps {
     orderId: number,
     nextStatus: OnlineOrderDetailData['fulfillmentStatus']
   ) => Promise<void>;
-  onUpdatePaymentStatus?: (
-    orderId: number,
-    nextPaymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
-  ) => Promise<void>;
   onEditOrder?: (order: OnlineOrderDetailData) => void;
 }
 
@@ -126,7 +122,6 @@ export const OnlineOrderDetailsDrawer: React.FC<OnlineOrderDetailsDrawerProps> =
   onAcceptOrder,
   onCancelOrder,
   onTransitionStatus,
-  onUpdatePaymentStatus,
   onEditOrder,
 }) => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -237,24 +232,10 @@ export const OnlineOrderDetailsDrawer: React.FC<OnlineOrderDetailsDrawerProps> =
               </span>
             )}
             {order.paymentStatus === 'pending' && (
-              <div className="flex items-center gap-1.5">
-                <span className="px-2.5 py-1 rounded text-xs font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">schedule</span>
-                  UNPAID
-                </span>
-                {onUpdatePaymentStatus && (
-                  <button
-                    type="button"
-                    disabled={isProcessing}
-                    onClick={() => handleAction(() => onUpdatePaymentStatus(order.id, 'paid'))}
-                    className="px-2 py-0.5 rounded text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer inline-flex items-center gap-0.5 shadow-2xs"
-                    title="Mark payment as PAID (syncs with POS)"
-                  >
-                    <span className="material-symbols-outlined text-[13px]">check</span>
-                    Mark as Paid
-                  </button>
-                )}
-              </div>
+              <span className="px-2.5 py-1 rounded text-xs font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">schedule</span>
+                UNPAID
+              </span>
             )}
             {(order.paymentStatus === 'failed' || order.paymentStatus === 'refunded') && (
               <span className="px-2.5 py-1 rounded text-xs font-bold uppercase bg-red-50 text-red-800 border border-red-200 flex items-center gap-1">
