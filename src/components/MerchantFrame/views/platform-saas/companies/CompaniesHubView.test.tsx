@@ -107,9 +107,9 @@ describe('CompaniesHubView', () => {
     await waitFor(() => expect(screen.getByTestId('stat-active-companies')).toHaveTextContent('9'));
   });
 
-  it('uses Material Symbols business and settings icons on the feature cards', () => {
+  it('uses Material Symbols badge and settings icons on the feature cards', () => {
     renderHub();
-    expect(within(screen.getByTestId('feature-card-company-profile')).getByText('business')).toHaveClass(
+    expect(within(screen.getByTestId('feature-card-company-profile')).getByText('badge')).toHaveClass(
       'material-symbols-outlined',
     );
     expect(within(screen.getByTestId('feature-card-company-configuration')).getByText('settings')).toHaveClass(
