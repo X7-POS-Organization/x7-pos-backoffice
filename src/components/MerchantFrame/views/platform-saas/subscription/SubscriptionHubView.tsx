@@ -232,16 +232,6 @@ export const SubscriptionHubView: React.FC<SubscriptionHubViewProps> = ({ onNavi
 
       {/* 3. Feature Cards Grid */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-[#1d1c17] flex items-center gap-2">
-            <span className="material-symbols-outlined text-base text-primary">apps</span>
-            <span>Subscription Sub-Modules</span>
-          </h2>
-          <span className="text-xs text-[#5f5e5e]">
-            {SUBSCRIPTION_SUB_MODULES.length} sub-modules available
-          </span>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
           {SUBSCRIPTION_SUB_MODULES.map((item) => {
             const badgeClass = item.badgeVariant

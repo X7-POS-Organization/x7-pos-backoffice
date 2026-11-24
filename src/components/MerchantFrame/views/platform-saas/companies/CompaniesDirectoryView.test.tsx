@@ -88,7 +88,7 @@ describe('CompaniesDirectoryView', () => {
     expect(listSaasCompanies).toHaveBeenCalledWith(expect.objectContaining({ status: 'active', page: 1, limit: 50 }));
     expect(screen.getByRole('heading', { level: 1, name: 'COMPANIES DIRECTORY' })).toBeInTheDocument();
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(crumbs).getByText('Companies Hub')).toBeInTheDocument();
+    expect(within(crumbs).getByText('Platform SaaS')).toBeInTheDocument();
     expect(within(crumbs).getByText('Companies Directory')).toHaveAttribute('aria-current', 'page');
   });
 
@@ -142,9 +142,9 @@ describe('CompaniesDirectoryView', () => {
     expect(await screen.findByText('No companies registered yet')).toBeInTheDocument();
   });
 
-  it('goes back to the Companies Hub', async () => {
+  it('goes back to the Platform SaaS Dashboard', async () => {
     renderDirectory();
-    await userEvent.click(within(screen.getByRole('navigation', { name: 'Platform SaaS navigation' })).getByRole('button', { name: 'Back to Companies Hub' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/platform-saas/companies/hub');
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Platform SaaS navigation' })).getByRole('button', { name: 'Back to Platform SaaS Dashboard' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/dashboard');
   });
 });

@@ -17,11 +17,9 @@ import { platformSaasPaths } from '@/modules/platform-saas/companies/lib/platfor
 import { companiesTrail, companyLabel } from '@/modules/platform-saas/companies/lib/saas-breadcrumbs';
 import { formatStatusLabel } from '@/modules/platform-saas/companies/lib/saas-format';
 import type { SaasCompaniesStats, SaasCompanyListItem } from '@/modules/platform-saas/companies/types/saas-company';
-import { companiesNav } from '@/modules/platform-saas/companies/lib/saas-nav';
 import {
   SaasAlert,
   SaasFeatureCards,
-  SaasNavBar,
   SaasPageHeader,
   SaasStatCards,
   type SaasFeatureCard,
@@ -194,7 +192,7 @@ export const CompaniesHubView: React.FC = () => {
       title: 'Company Profile',
       subtitle: 'LEGAL, FISCAL & ADMINISTRATIVE RECORDS',
       description: `Inspect and edit legal name, commercial name, tax ID, billing address, base currency and account status. ${contextHint}`,
-      icon: 'business',
+      icon: 'badge',
       actionText: 'Open Company Profile',
       onClick: () => void openContextFeature('profile'),
     },
@@ -275,12 +273,6 @@ export const CompaniesHubView: React.FC = () => {
       <SaasStatCards stats={statItems} loading={isLoading} />
 
       <SaasFeatureCards cards={cards} />
-
-      <SaasNavBar
-        backLabel="Back to Platform SaaS Dashboard"
-        backTo="/dashboard"
-        items={companiesNav('companies-hub', contextId)}
-      />
     </div>
   );
 };

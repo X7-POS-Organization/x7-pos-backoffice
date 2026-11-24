@@ -12,7 +12,7 @@ import { resolveStaffTarget } from '@/platform/merchant-frame/merchant-routes';
 import { OrderPaymentsView } from '@/modules/restaurant-operations/pos/views/OrderPaymentsView';
 import { PaymentGatewayConfigsView } from '@/modules/restaurant-operations/pos/views/PaymentGatewayConfigsView';
 import { PaymentTerminalsView } from '@/modules/restaurant-operations/pos/views/PaymentTerminalsView';
-import { CompaniesHubView } from '@/components/MerchantFrame/views/platform-saas/companies/CompaniesHubView';
+import { CompaniesDirectoryView } from '@/components/MerchantFrame/views/platform-saas/companies/CompaniesDirectoryView';
 import { CompanyHubView } from '@/components/MerchantFrame/views/platform-saas/companies/CompanyHubView';
 import { CompanyProfileView } from '@/components/MerchantFrame/views/platform-saas/companies/CompanyProfileView';
 import { MerchantTerminalsDirectoryView } from '@/components/MerchantFrame/views/platform-saas/merchants/MerchantTerminalsDirectoryView';
@@ -111,7 +111,7 @@ describe('resolveStaffTarget', () => {
 
 describe('platform saas context views', () => {
   it('passes the URL ids to the views and asks for a company when they are missing', () => {
-    expect(viewFor('saas-companies-hub').type).toBe(CompaniesHubView);
+    expect(viewFor('saas-companies-hub').type).toBe(CompaniesDirectoryView);
     const hub = renderMerchantView('saas-company-hub', context({ routeParams: { companyId: 3 } }));
     expect(isValidElement<{ companyId: number }>(hub) && hub.type === CompanyHubView && hub.props.companyId).toBe(3);
     const profile = renderMerchantView('saas-company-profile', context({ routeParams: { companyId: 3 } }));

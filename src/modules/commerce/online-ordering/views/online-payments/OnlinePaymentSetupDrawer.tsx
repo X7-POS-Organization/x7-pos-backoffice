@@ -126,8 +126,8 @@ const OnlinePaymentSetupForm: React.FC<{
     }
 
     const parsedAmount = Number(amount);
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
-      setError('Amount must be a valid non-negative number.');
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError('Amount must be greater than $0.00.');
       return;
     }
 
@@ -153,7 +153,8 @@ const OnlinePaymentSetupForm: React.FC<{
   };
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4 p-1 font-sans">
+    <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col flex-1 min-h-0 font-sans">
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-lg text-xs flex items-center gap-2">
           <span className="material-symbols-outlined text-base text-red-600 shrink-0">error</span>
@@ -226,10 +227,11 @@ const OnlinePaymentSetupForm: React.FC<{
           <input
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
             max="9999999999.99"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onWheel={(e) => e.currentTarget.blur()}
             required
             className="w-full h-[38px] px-3 text-sm font-bold rounded-lg border border-[#d5cfc4] bg-white focus:outline-none focus:border-[#ae001a] text-[#1d1c17] font-mono"
           />
@@ -318,9 +320,17 @@ const OnlinePaymentSetupForm: React.FC<{
           </select>
         </div>
       )}
+      </div>
 
       {/* Submit Footer */}
-      <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#e8e2d8]">
+      <div className="bg-white border-t border-[#e8e2d8] shrink-0">
+        {error && (
+          <div className="mx-6 mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm text-red-600 shrink-0">error</span>
+            <span>{error}</span>
+          </div>
+        )}
+        <div className="px-6 py-4 flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
@@ -338,6 +348,7 @@ const OnlinePaymentSetupForm: React.FC<{
           </span>
           <span>{isSubmitting ? 'Saving...' : mode === 'edit' ? 'Update Payment' : 'Record Payment'}</span>
         </button>
+        </div>
       </div>
     </form>
   );

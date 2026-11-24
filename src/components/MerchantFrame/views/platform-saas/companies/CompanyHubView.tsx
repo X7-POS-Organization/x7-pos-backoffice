@@ -9,10 +9,8 @@ import { platformSaasPaths } from '@/modules/platform-saas/companies/lib/platfor
 import { companyLabel, companyTrail, withCurrent } from '@/modules/platform-saas/companies/lib/saas-breadcrumbs';
 import { formatLocation, formatStatusLabel } from '@/modules/platform-saas/companies/lib/saas-format';
 import type { SaasCompanyHub } from '@/modules/platform-saas/companies/types/saas-company';
-import { companyNav } from '@/modules/platform-saas/companies/lib/saas-nav';
 import {
   SaasErrorState,
-  SaasNavBar,
   SaasFeatureCards,
   SaasPageHeader,
   SaasStatCards,
@@ -150,12 +148,6 @@ export const CompanyHubView: React.FC<CompanyHubViewProps> = ({ companyId }) => 
           <SaasFeatureCards cards={cards} />
         </>
       )}
-
-      <SaasNavBar
-        backLabel="Back to Companies Directory"
-        backTo={platformSaasPaths.companiesDirectory()}
-        items={companyNav(companyId, 'company-hub')}
-      />
     </div>
   );
 };

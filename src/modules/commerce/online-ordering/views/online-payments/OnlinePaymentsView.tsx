@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { getAccessToken, clearAuthSession } from '@/platform/auth/lib/auth-storage';
-import { API_BASE } from '@/shared/api/http';
+import { API_BASE, authHeaders } from '@/shared/api/http';
 import {
   OnlinePaymentDetailsDrawer,
   type OnlinePaymentData,
@@ -18,6 +18,7 @@ import {
   NoColumnsEmptyState,
   type TableDensity,
 } from '@/shared/components/TableOptionsMenu';
+import { ConfirmStatusToggleDialog } from '@/shared/components/StatusToggle';
 
 interface OnlinePaymentsViewProps {
   onNavigate?: (view: string) => void;
@@ -38,8 +39,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
   const [selectedProviderFilter, setSelectedProviderFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter>('all');
   const [selectedStatusPills, setSelectedStatusPills] = useState<string[]>([]);
-  const [showActiveStatus, setShowActiveStatus] = useState<boolean>(true);
-  const [showDeletedStatus, setShowDeletedStatus] = useState<boolean>(false);
+  const [logicalStatusFilter, setLogicalStatusFilter] = useState<'all' | 'active' | 'deleted'>('all');
 
   // Auto-refresh
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(10);
@@ -64,6 +64,8 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
   const [isSetupDrawerOpen, setIsSetupDrawerOpen] = useState<boolean>(false);
   const [setupMode, setSetupMode] = useState<'create' | 'edit'>('create');
   const [paymentToEdit, setPaymentToEdit] = useState<OnlinePaymentData | null>(null);
+  const [paymentToVoid, setPaymentToVoid] = useState<OnlinePaymentData | null>(null);
+  const [isVoiding, setIsVoiding] = useState<boolean>(false);
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -78,10 +80,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
     if (!token) return;
     try {
       const res = await fetch(`${API_BASE}/online-orders?limit=100`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders(true),
       });
       if (res.ok) {
         const json = await res.json();
@@ -126,10 +125,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
         });
 
         const res = await fetch(`${API_BASE}/online-payments?${params.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders(true),
         });
 
         if (res.status === 401) {
@@ -150,10 +146,9 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
 
         setPayments(dataList);
 
-        if (selectedPayment) {
-          const fresh = dataList.find((p) => p.id === selectedPayment.id);
-          if (fresh) setSelectedPayment(fresh);
-        }
+        setSelectedPayment((prev) =>
+          prev ? dataList.find((p) => p.id === prev.id) ?? prev : null
+        );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Error loading online payments';
         if (!silent) setError(msg);
@@ -165,7 +160,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
         }
       }
     },
-    [selectedPayment]
+    []
   );
 
   useEffect(() => {
@@ -211,8 +206,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
     selectedProviderFilter !== 'all' ||
     statusFilter !== 'all' ||
     selectedStatusPills.length > 0 ||
-    !showActiveStatus ||
-    showDeletedStatus
+    logicalStatusFilter !== 'all'
   );
 
   const handleResetAllFilters = () => {
@@ -221,8 +215,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
     setSelectedProviderFilter('all');
     setStatusFilter('all');
     setSelectedStatusPills([]);
-    setShowActiveStatus(true);
-    setShowDeletedStatus(false);
+    setLogicalStatusFilter('all');
     setCurrentPage(1);
   };
 
@@ -230,8 +223,8 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => {
       const isDeleted = p.logicalStatus === 'deleted';
-      if (isDeleted && !showDeletedStatus) return false;
-      if (!isDeleted && !showActiveStatus) return false;
+      if (logicalStatusFilter === 'active' && isDeleted) return false;
+      if (logicalStatusFilter === 'deleted' && !isDeleted) return false;
 
       if (selectedOrderFilter !== 'all' && String(p.onlineOrderId) !== selectedOrderFilter) {
         return false;
@@ -277,8 +270,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
     });
   }, [
     payments,
-    showActiveStatus,
-    showDeletedStatus,
+    logicalStatusFilter,
     selectedOrderFilter,
     selectedProviderFilter,
     statusFilter,
@@ -344,11 +336,8 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
     if (!token) return;
 
     const res = await fetch(`${API_BASE}/online-payments/${paymentId}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      method: 'PUT',
+      headers: authHeaders(true),
       body: JSON.stringify({ status: nextStatus }),
     });
 
@@ -367,10 +356,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
 
     const res = await fetch(`${API_BASE}/online-payments/${paymentId}/sync-gateway`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders(true),
     });
 
     if (!res.ok) {
@@ -393,10 +379,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
 
     const res = await fetch(`${API_BASE}/online-payments/${paymentId}/refund`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders(true),
       body: JSON.stringify({
         ...(refundAmount !== undefined ? { refundAmount } : {}),
         ...(reason ? { reason } : {}),
@@ -421,7 +404,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
     const url = isEdit
       ? `${API_BASE}/online-payments/${formData.id}`
       : `${API_BASE}/online-payments`;
-    const method = isEdit ? 'PATCH' : 'POST';
+    const method = isEdit ? 'PUT' : 'POST';
 
     const payload: Record<string, unknown> = {
       onlineOrderId: formData.onlineOrderId,
@@ -439,10 +422,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
 
     const res = await fetch(url, {
       method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders(true),
       body: JSON.stringify(payload),
     });
 
@@ -461,21 +441,19 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
   };
 
   const handleDeletePayment = async (payment: OnlinePaymentData) => {
-    if (
-      !confirm(
-        `Are you sure you want to void payment #PAY-${payment.id}? Historical audit metadata will be preserved.`
-      )
-    ) {
-      return;
-    }
+    setPaymentToVoid(payment);
+  };
 
+  const executeVoidPayment = async () => {
+    if (!paymentToVoid) return;
     const token = getAccessToken();
     if (!token) return;
 
+    setIsVoiding(true);
     try {
-      const res = await fetch(`${API_BASE}/online-payments/${payment.id}`, {
+      const res = await fetch(`${API_BASE}/online-payments/${paymentToVoid.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(false),
       });
 
       if (!res.ok) {
@@ -483,11 +461,14 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
         throw new Error(errJson?.message || 'Failed to void payment');
       }
 
-      showToast(`Payment #PAY-${payment.id} marked as DELETED`);
+      showToast(`Payment #PAY-${paymentToVoid.id} marked as DELETED`);
+      setPaymentToVoid(null);
       setIsDetailDrawerOpen(false);
       void fetchPayments(false);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error voiding payment');
+      showToast(err instanceof Error ? err.message : 'Error voiding payment');
+    } finally {
+      setIsVoiding(false);
     }
   };
 
@@ -497,11 +478,8 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
 
     try {
       const res = await fetch(`${API_BASE}/online-payments/${payment.id}`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        method: 'PUT',
+        headers: authHeaders(true),
         body: JSON.stringify({ logicalStatus: 'active' }),
       });
 
@@ -514,7 +492,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
       setIsDetailDrawerOpen(false);
       void fetchPayments(false);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error restoring payment');
+      showToast(err instanceof Error ? err.message : 'Error restoring payment');
     }
   };
 
@@ -850,37 +828,6 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
             </select>
           </div>
 
-          {/* Logical Status Checkboxes (ACTIVE / DELETED) */}
-          <div className="flex items-center gap-3 h-[34px] px-3 bg-[#fcfcfb] rounded-lg border border-[#d5cfc4] shrink-0">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#76736a] font-poppins">
-              Logical:
-            </span>
-            <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1d1c17] cursor-pointer select-none font-poppins hover:text-[#ae001a] transition-colors duration-200">
-              <input
-                type="checkbox"
-                checked={showActiveStatus}
-                onChange={(e) => {
-                  setShowActiveStatus(e.target.checked);
-                  setCurrentPage(1);
-                }}
-                className="w-3.5 h-3.5 rounded border-[#d5cfc4] text-[#ae001a] focus:ring-[#ae001a] accent-[#ae001a] cursor-pointer"
-              />
-              <span>ACTIVE</span>
-            </label>
-            <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1d1c17] cursor-pointer select-none font-poppins hover:text-[#ae001a] transition-colors duration-200">
-              <input
-                type="checkbox"
-                checked={showDeletedStatus}
-                onChange={(e) => {
-                  setShowDeletedStatus(e.target.checked);
-                  setCurrentPage(1);
-                }}
-                className="w-3.5 h-3.5 rounded border-[#d5cfc4] text-[#ae001a] focus:ring-[#ae001a] accent-[#ae001a] cursor-pointer"
-              />
-              <span>DELETED</span>
-            </label>
-          </div>
-
           {hasActiveFilters && (
             <button
               type="button"
@@ -986,24 +933,46 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
             <button
               type="button"
               onClick={() => {
-                setShowDeletedStatus((prev) => !prev);
+                setLogicalStatusFilter((prev) => (prev === 'deleted' ? 'active' : 'deleted'));
                 setCurrentPage(1);
               }}
               className={`h-[30px] px-2.5 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 font-sans font-poppins whitespace-nowrap border ${
-                kpiVoided > 0 || showDeletedStatus
+                kpiVoided > 0 || logicalStatusFilter === 'deleted'
                   ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200'
                   : 'bg-white hover:bg-zinc-50 text-zinc-600 border-zinc-200'
               }`}
               title="Toggle archived / voided payments"
             >
-              <span className={`material-symbols-outlined text-[15px] ${kpiVoided > 0 || showDeletedStatus ? 'text-red-600' : 'text-zinc-400'}`}>
+              <span className={`material-symbols-outlined text-[15px] ${kpiVoided > 0 || logicalStatusFilter === 'deleted' ? 'text-red-600' : 'text-zinc-400'}`}>
                 archive
               </span>
               <span>Voided</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${kpiVoided > 0 || showDeletedStatus ? 'bg-red-200 text-red-900' : 'bg-zinc-100 text-zinc-600'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${kpiVoided > 0 || logicalStatusFilter === 'deleted' ? 'bg-red-200 text-red-900' : 'bg-zinc-100 text-zinc-600'}`}>
                 {kpiVoided}
               </span>
             </button>
+
+            <div className="flex items-center gap-1.5 text-xs text-[#5f5e5e] shrink-0">
+              <span className="material-symbols-outlined text-base">tune</span>
+              <div className="relative flex items-center">
+                <select
+                  aria-label="Filter by logical status"
+                  value={logicalStatusFilter}
+                  onChange={(e) => {
+                    setLogicalStatusFilter(e.target.value as 'all' | 'active' | 'deleted');
+                    setCurrentPage(1);
+                  }}
+                  className="appearance-none h-[30px] pl-2.5 pr-7 bg-[#fcfcfb] rounded-lg border border-[#d5cfc4] text-[11px] font-semibold focus:border-[#ae001a] outline-none font-poppins text-[#1d1c17] cursor-pointer"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="deleted">Deleted</option>
+                </select>
+                <span className="material-symbols-outlined text-[15px] text-[#5f5e5e] pointer-events-none absolute right-2">
+                  expand_more
+                </span>
+              </div>
+            </div>
 
             <button
               type="button"
@@ -1138,7 +1107,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
                       </th>
                     )}
                     {visibleColumns.actions && (
-                      <th className={`text-center text-label-caps font-semibold text-[#5f5e5e] font-sans text-xs ${densityPadding} whitespace-nowrap`}>
+                      <th className={`sticky right-0 z-10 bg-[#ece8e0] text-center text-label-caps font-semibold text-[#5f5e5e] font-sans text-xs ${densityPadding} whitespace-nowrap shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.06)]`}>
                         Actions
                       </th>
                     )}
@@ -1303,7 +1272,7 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
                           {/* Actions */}
                           {visibleColumns.actions && (
                             <td
-                              className={`${densityPadding} text-center whitespace-nowrap`}
+                              className={`sticky right-0 z-10 bg-white group-hover:bg-[#f8f3eb] transition-colors ${densityPadding} text-center whitespace-nowrap shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.06)]`}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <div className="flex items-center justify-center gap-1">
@@ -1428,6 +1397,19 @@ export const OnlinePaymentsView: React.FC<OnlinePaymentsViewProps> = ({ onNaviga
         }}
         onSubmit={handleSetupSubmit}
       />
+
+      {paymentToVoid && (
+        <ConfirmStatusToggleDialog
+          entityName={`#PAY-${paymentToVoid.id} (${paymentToVoid.paymentProvider})`}
+          direction="deactivate"
+          submitting={isVoiding}
+          description={`Voiding payment "#PAY-${paymentToVoid.id}" will mark it as DELETED while preserving historical audit metadata.`}
+          onConfirm={executeVoidPayment}
+          onClose={() => {
+            if (!isVoiding) setPaymentToVoid(null);
+          }}
+        />
+      )}
     </div>
   );
 };

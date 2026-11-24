@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { getAccessToken, clearAuthSession, getStoredUser } from '@/platform/auth/lib/auth-storage';
+import { clearAuthSession, getStoredUser } from '@/platform/auth/lib/auth-storage';
+import { authHeaders, getActiveSuperAdminMerchantId } from '@/shared/api/http';
 import {
   TableOptionsMenu,
   TablePaginationFooter,
@@ -155,11 +156,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
   // 1. Fetch Online Stores (for dropdown filter)
   const fetchStores = useCallback(async () => {
     try {
-      const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = authHeaders(true);
 
       const res = await fetch(`${API_BASE}/online-stores?limit=100`, { headers });
       if (res.ok) {
@@ -177,11 +174,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
   // 1b. Fetch Customers (for setup drawer dropdown)
   const fetchCustomers = useCallback(async () => {
     try {
-      const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = authHeaders(true);
 
       const res = await fetch(`${API_BASE}/customers?limit=100`, { headers });
       if (res.ok) {
@@ -192,7 +185,10 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
 
         // Scope to active merchant as defense-in-depth
         const storedUser = getStoredUser();
-        const activeMerchantId = storedUser?.merchant?.id;
+        const overrideMerchantId = getActiveSuperAdminMerchantId();
+        const activeMerchantId = overrideMerchantId
+          ? Number(overrideMerchantId)
+          : storedUser?.merchant?.id;
         const scopedList = activeMerchantId
           ? list.filter((c: CustomerOption) => !c.merchantId || c.merchantId === activeMerchantId)
           : list;
@@ -207,11 +203,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
   // 1c. Fetch Catalog Products, Online Menus & Menu Items (for setup drawer item builder)
   const fetchProductsAndMenus = useCallback(async () => {
     try {
-      const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = authHeaders(true);
 
       const [prodRes, menuRes, itemRes] = await Promise.all([
         fetch(`${API_BASE}/products?limit=250`, { headers }),
@@ -308,11 +300,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
   // 1d. Fetch Kitchen Stations for KDS routing
   const fetchKitchenStations = useCallback(async () => {
     try {
-      const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = authHeaders(true);
       const res = await fetch(`${API_BASE}/kitchen-station?status=active&sortBy=displayOrder&sortOrder=ASC`, { headers });
       if (res.ok) {
         const json = await res.json();
@@ -350,11 +338,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
         else setIsRefreshing(true);
         setError(null);
 
-        const token = getAccessToken();
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        };
+        const headers = authHeaders(true);
 
         const res = await fetch(`${API_BASE}/online-orders?limit=100&sortBy=id&sortOrder=DESC`, {
           headers,
@@ -430,11 +414,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
   // 3. Operational Actions: Accept & Inject POS
   const handleAcceptOrder = async (orderId: number, stationId?: number) => {
     try {
-      const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = authHeaders(true);
 
       const res = await fetch(`${API_BASE}/online-orders/${orderId}/accept`, {
         method: 'POST',
@@ -460,11 +440,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
   // 4. Operational Actions: Cancel Order
   const handleCancelOrder = async (orderId: number) => {
     try {
-      const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = authHeaders(true);
 
       const res = await fetch(`${API_BASE}/online-orders/${orderId}/cancel`, {
         method: 'POST',
@@ -491,11 +467,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
     orderId: number,
     nextStatus: OnlineOrderDetailData['fulfillmentStatus']
   ) => {
-    const token = getAccessToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    const headers = authHeaders(true);
 
     const res = await fetch(`${API_BASE}/online-orders/${orderId}/fulfillment-status`, {
       method: 'PATCH',
@@ -514,39 +486,6 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
         detail: { action: 'fulfillment_change', orderId, nextStatus },
       }),
     );
-    await fetchOrders(true);
-    if (selectedOrder && selectedOrder.id === orderId) {
-      const refreshed = await fetch(`${API_BASE}/online-orders/${orderId}`, { headers });
-      if (refreshed.ok) {
-        const json = await refreshed.json();
-        if (json.data) setSelectedOrder(json.data);
-      }
-    }
-  };
-
-  // 5a. Operational Actions: Update Payment Status
-  const handleUpdatePaymentStatus = async (
-    orderId: number,
-    nextPaymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
-  ) => {
-    const token = getAccessToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-
-    const res = await fetch(`${API_BASE}/online-orders/${orderId}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ paymentStatus: nextPaymentStatus }),
-    });
-
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.message || 'Failed to update payment status');
-    }
-
-    showToast(`Order #ONL-${orderId} payment marked as ${nextPaymentStatus.toUpperCase()}`);
     await fetchOrders(true);
     if (selectedOrder && selectedOrder.id === orderId) {
       const refreshed = await fetch(`${API_BASE}/online-orders/${orderId}`, { headers });
@@ -582,11 +521,7 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
     formData: OnlineOrderFormData,
     mode: 'create' | 'edit'
   ) => {
-    const token = getAccessToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    const headers = authHeaders(true);
 
     if (mode === 'create') {
       const payload: Record<string, unknown> = {
@@ -2217,7 +2152,6 @@ export const OnlineOrdersView: React.FC<OnlineOrdersViewProps> = ({ onNavigate: 
         onAcceptOrder={handleAcceptOrder}
         onCancelOrder={handleCancelOrder}
         onTransitionStatus={handleTransitionStatus}
-        onUpdatePaymentStatus={handleUpdatePaymentStatus}
         onEditOrder={(order) => {
           setIsDrawerOpen(false);
           handleOpenEditOrder(order);

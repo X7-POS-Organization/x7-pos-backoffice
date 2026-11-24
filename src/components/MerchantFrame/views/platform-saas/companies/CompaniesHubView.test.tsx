@@ -22,8 +22,6 @@ vi.mock('@/platform/auth/lib/auth-storage', () => ({
   getEffectiveUserRole: vi.fn(),
 }));
 
-const navBar = () => within(screen.getByRole('navigation', { name: 'Platform SaaS navigation' }));
-
 function LocationProbe() {
   return <div data-testid="location">{useLocation().pathname}</div>;
 }
@@ -87,8 +85,7 @@ describe('CompaniesHubView', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'COMPANIES COMMAND HUB' })).toBeInTheDocument();
     expect(screen.getByText(/Company profile management and tenant setup/)).toBeInTheDocument();
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(crumbs).getByText('Platform SaaS')).toBeInTheDocument();
-    expect(within(crumbs).getByText('Companies Hub')).toHaveAttribute('aria-current', 'page');
+    expect(within(crumbs).getByText('Platform SaaS')).toHaveAttribute('aria-current', 'page');
     await waitFor(() => expect(getSaasCompaniesStats).toHaveBeenCalled());
   });
 
@@ -110,9 +107,9 @@ describe('CompaniesHubView', () => {
     await waitFor(() => expect(screen.getByTestId('stat-active-companies')).toHaveTextContent('9'));
   });
 
-  it('uses Material Symbols business and settings icons on the feature cards', () => {
+  it('uses Material Symbols badge and settings icons on the feature cards', () => {
     renderHub();
-    expect(within(screen.getByTestId('feature-card-company-profile')).getByText('business')).toHaveClass(
+    expect(within(screen.getByTestId('feature-card-company-profile')).getByText('badge')).toHaveClass(
       'material-symbols-outlined',
     );
     expect(within(screen.getByTestId('feature-card-company-configuration')).getByText('settings')).toHaveClass(
@@ -181,14 +178,14 @@ describe('CompaniesHubView', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/platform-saas/companies/3/profile'));
   });
 
-  it('changing the selector updates the remembered context, every card and the bottom bar', async () => {
+  it('changing the selector updates the remembered context and every card', async () => {
     renderHub();
     const select = screen.getByLabelText('Company context');
     await waitFor(() => expect(select).toHaveValue('3'));
     await userEvent.selectOptions(select, '5');
     expect(getRememberedCompanyContext()).toBe(5);
     expect(screen.getByTestId('feature-card-company-configuration')).toHaveTextContent('Opens Charlie Cafe.');
-    await userEvent.click(navBar().getByRole('button', { name: 'Company Profile' }));
+    await userEvent.click(screen.getByTestId('feature-card-company-profile'));
     expect(screen.getByTestId('location')).toHaveTextContent('/platform-saas/companies/5/profile');
   });
 
@@ -219,26 +216,11 @@ describe('CompaniesHubView', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/platform-saas/companies/directory');
   });
 
-  it('has no Quick Launch panel: the bottom NavHubBar links every company feature', async () => {
+  it('has no Quick Launch panel and no bottom NavHubBar on the Command Hub', async () => {
     rememberCompanyContext(3);
     renderHub();
     expect(screen.queryByRole('heading', { name: 'Quick Launch' })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText('Company context')).toHaveValue('3'));
-    const bar = navBar();
-    expect(bar.getAllByRole('button')).toHaveLength(6);
-    for (const name of ['Back to Platform SaaS Dashboard', 'Companies Hub', 'Companies Directory', 'Company Profile', 'Company Configuration', 'Company Merchants']) {
-      expect(bar.getByRole('button', { name })).toBeInTheDocument();
-    }
-    expect(bar.getByRole('button', { name: 'Companies Hub' })).toHaveAttribute('aria-current', 'page');
-    for (const [label, path] of [
-      ['Companies Directory', '/platform-saas/companies/directory'],
-      ['Company Configuration', '/platform-saas/companies/3/configuration'],
-      ['Company Merchants', '/platform-saas/companies/3/merchants'],
-    ] as const) {
-      await userEvent.click(navBar().getByRole('button', { name: label }));
-      expect(screen.getByTestId('location')).toHaveTextContent(path);
-    }
-    await userEvent.click(navBar().getByRole('button', { name: 'Back to Platform SaaS Dashboard' }));
-    expect(screen.getByTestId('location')).toHaveTextContent('/dashboard');
+    expect(screen.queryByRole('navigation', { name: 'Platform SaaS navigation' })).not.toBeInTheDocument();
   });
 });

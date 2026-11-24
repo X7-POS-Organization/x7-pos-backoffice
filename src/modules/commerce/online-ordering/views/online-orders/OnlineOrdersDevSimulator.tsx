@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getAccessToken, getStoredUser } from '@/platform/auth/lib/auth-storage';
+import { getStoredUser } from '@/platform/auth/lib/auth-storage';
+import { authHeaders } from '@/shared/api/http';
 
 export interface OnlineStoreOption {
   id: number;
@@ -65,11 +66,7 @@ export const OnlineOrdersDevSimulator: React.FC<OnlineOrdersDevSimulatorProps> =
     type: 'delivery' | 'pickup' | 'dine_in',
     orderNotes: string
   ) => {
-    const token = getAccessToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    const headers = authHeaders(true);
 
     let targetStoreId = stores[0]?.id;
     if (!targetStoreId) {
@@ -190,11 +187,7 @@ export const OnlineOrdersDevSimulator: React.FC<OnlineOrdersDevSimulatorProps> =
     setStatusType(null);
 
     try {
-      const token = getAccessToken();
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = authHeaders(true);
 
       if (mode === 'clear') {
         let cleared = false;
