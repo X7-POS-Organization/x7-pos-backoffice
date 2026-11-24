@@ -75,9 +75,16 @@ import { KitchenAnalyticsView } from '@/modules/restaurant-operations/kitchen-di
 import { LedgerAccountsView } from '@/modules/core/financial-engine/views/LedgerAccountsView';
 import { JournalEntriesView } from '@/modules/core/financial-engine/views/JournalEntriesView';
 import { JournalEntryLinesView } from '@/modules/core/financial-engine/views/JournalEntryLinesView';
+import { BillingFinancialSyncView } from '@/components/MerchantFrame/views/core/billing/BillingFinancialSyncView';
+import { BillingInventorySyncView } from '@/components/MerchantFrame/views/core/billing/BillingInventorySyncView';
+import { ReceiptsView } from '@/modules/core/billing-transactions/views/receipts/ReceiptsView';
+import { BillingReportsView } from '@/modules/core/billing-transactions/views/reports/BillingReportsView';
 
 import { SuppliersView } from '@/modules/core/business-partners/views/SuppliersView';
 import { CustomersView } from '@/modules/core/business-partners/views/CustomersView';
+import { ReceiptItemsView } from '@/modules/core/billing-transactions/views/receipt-items/ReceiptItemsView';
+import { ReceiptTaxesView } from '@/modules/core/billing-transactions/views/receipt-taxes/ReceiptTaxesView';
+import { BillingPartnerSyncView } from '@/components/MerchantFrame/views/core/billing/BillingPartnerSyncView';
 import { SupplierInvoicesView } from '@/modules/finance-hr/accounts-payable/views/SupplierInvoicesView';
 import { SupplierInvoiceItemsView } from '@/modules/finance-hr/accounts-payable/views/SupplierInvoiceItemsView';
 import { SupplierCreditNotesView } from '@/modules/finance-hr/accounts-payable/views/SupplierCreditNotesView';
@@ -486,6 +493,12 @@ view('journal-entries-lines', (ctx) => (
   />
 ));
 
+// ---- Billing & Transactions ----
+view('billing-financial-sync', () => <BillingFinancialSyncView />);
+view('billing-inventory-sync', () => <BillingInventorySyncView />);
+view('receipt-orders', (ctx) => <ReceiptsView onNavigate={ctx.navigateToFeature} />);
+view('billing-reports', (ctx) => <BillingReportsView onNavigate={ctx.onNavigate} />);
+
 // ---- Business Partners / Clientes ----
 view('customers', (ctx) => (
   <CustomersView
@@ -494,6 +507,11 @@ view('customers', (ctx) => (
     merchantId={getCurrentMerchantId() ?? undefined}
   />
 ));
+
+// ---- Billing & Transactions ----
+view('receipt-items', () => <ReceiptItemsView />);
+view('receipt-taxes', () => <ReceiptTaxesView />);
+view('billing-partner-sync', (ctx) => <BillingPartnerSyncView onNavigate={ctx.onNavigate} />);
 
 // ---- Cuentas por pagar ----
 view('suppliers', (ctx) => <SuppliersView onNavigate={ctx.onNavigate} companyId={ctx.profile?.company_id} />);

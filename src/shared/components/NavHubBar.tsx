@@ -130,7 +130,11 @@ const ITEM_ID_SHORTCUTS: Record<string, string> = {
   // Billing & Transactions
   'receipt-items': 'RECEIPT ITEMS',
   'receipt-orders': 'RECEIPTS',
-  'receipt-taxes': 'RECEIPT TAXES',
+  'receipt-taxes': 'RECEIPTS TAXES',
+  'billing-financial-sync': 'LEDGER SYNC',
+  'billing-partner-sync': 'PARTNER LINK',
+  'billing-inventory-sync': 'INVENTORY SYNC',
+  'billing-reports': 'REPORTS',
 
   // Financial Engine
   'journal-entries': 'ENTRIES',
@@ -378,8 +382,12 @@ const SPECIFIC_SHORTCUTS: Record<string, string> = {
   'RECEIPT ITEMS': 'RECEIPT ITEMS',
   'CUSTOMER SALES RECEIPTS': 'RECEIPTS',
   'RECEIPT ORDERS': 'RECEIPTS',
-  'RECEIPT TAX LINE BREAKDOWN': 'RECEIPT TAXES',
-  'RECEIPTS TAXES': 'RECEIPT TAXES',
+  'RECEIPT TAX LINE BREAKDOWN': 'RECEIPTS TAXES',
+  'RECEIPTS TAXES': 'RECEIPTS TAXES',
+  'FINANCIAL LEDGER SYNC': 'LEDGER SYNC',
+  'BUSINESS PARTNERS BILLING LINK': 'PARTNER LINK',
+  'INVENTORY & BILLING STOCK SYNC': 'INVENTORY SYNC',
+  'BILLING REPORTS': 'REPORTS',
 
   // Financial Engine
   'GENERAL JOURNAL ENTRIES': 'ENTRIES',
@@ -631,16 +639,23 @@ export const NavHubBar: React.FC<NavHubBarProps> = ({
                   item.onClick();
                 }}
                 aria-current={isActive ? 'page' : undefined}
-                className={`px-1.5 lg:px-2 py-1 rounded text-[10px] lg:text-[11px] font-semibold tracking-tight transition-colors duration-200 flex items-center gap-0.5 sm:gap-1 cursor-pointer font-sans select-none whitespace-nowrap shrink-0 ${
+                className={`px-1.5 lg:px-2 py-1 rounded text-[10px] lg:text-[11px] tracking-tight transition-colors duration-200 flex items-center gap-0.5 sm:gap-1 cursor-pointer font-sans select-none whitespace-nowrap shrink-0 ${
                   isActive
-                    ? 'bg-[#ae001a] text-white shadow-xs'
-                    : 'text-zinc-300 hover:text-[#ae001a] hover:bg-zinc-800'
+                    ? 'bg-[#ae001a] text-white font-bold shadow-xs'
+                    : 'font-semibold text-zinc-300 hover:text-[#ae001a] hover:bg-zinc-800'
                 }`}
               >
                 {item.icon && (
                   <span className="material-symbols-outlined text-[13px] sm:text-[14px] lg:text-[15px] shrink-0" aria-hidden="true">{item.icon}</span>
                 )}
-                <span>{displayLabel}</span>
+                {/* Active option: corporate red fill plus a distinct underline (same cue as the
+                    Quick Launch active anchor), so it does not rely on color alone. */}
+                <span
+                  data-active-indicator={isActive ? 'underline' : undefined}
+                  className={isActive ? 'underline underline-offset-4 decoration-2 decoration-white' : undefined}
+                >
+                  {displayLabel}
+                </span>
               </button>
             );
           })}

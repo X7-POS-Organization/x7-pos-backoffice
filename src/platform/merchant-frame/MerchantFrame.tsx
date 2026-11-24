@@ -49,6 +49,7 @@ import {
 
 import type { AllocationsContext, MerchantViewContext } from '@/platform/merchant-frame/merchant-view-registry';
 import { FeatureInDevelopmentView } from '@/shared/components/PlaceholderViews';
+import { isPhoneViewport } from '@/platform/merchant-frame/layout/sidebar-viewport';
 import { MerchantHomeDashboard } from '@/modules/platform-saas/client-backoffice/views/dashboard/MerchantHomeDashboard';
 import {
   apiRequest,
@@ -650,7 +651,8 @@ export const MerchantFrame: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger, profile?.role, selectedPreviewUser]);
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  // En el teléfono el menú arranca oculto: abierto deja la pantalla en una franja estrecha.
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => isPhoneViewport());
 
   const [isReservationOpen, setIsReservationOpen] = useState<boolean>(false);
   const [isVoidOpen, setIsVoidOpen] = useState<boolean>(false);
@@ -1056,6 +1058,8 @@ export const MerchantFrame: React.FC = () => {
                         const handleNavigateTarget = (targetId: string, route?: string) => {
                           setActiveCategory(cat.id);
                           setActiveTab(targetId);
+                          // En el teléfono, elegir una pantalla cierra el menú para mostrarla entera
+                          if (isPhoneViewport()) setIsSidebarCollapsed(true);
                           const saasPath = pathForPlatformSaasTab(targetId);
                           if (route) {
                             navigate(route, { state: { activeTab: targetId, activeCategory: cat.id } });

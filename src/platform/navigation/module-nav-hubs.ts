@@ -12,6 +12,18 @@ export interface ModuleNavItem {
   icon: string;
   live: boolean;
   description: string;
+  /**
+   * Enlaces a hubs de OTRAS aplicaciones que la NavHubBar añade solo cuando esta opción está
+   * activa (p. ej. la sincronización facturación ↔ inventario enlaza los hubs de inventario).
+   * No registran la feature en este hub: navHubForFeature sigue ignorándolos.
+   */
+  crossLinks?: ModuleNavCrossLink[];
+}
+
+export interface ModuleNavCrossLink {
+  featureId: string;
+  label: string;
+  icon: string;
 }
 
 export interface ModuleNavHub {
@@ -303,9 +315,23 @@ export const MODULE_NAV_HUBS: ModuleNavHub[] = [
     icon: 'receipt_long',
     description: 'Receipts issued, their line items and the taxes they carry.',
     items: [
-      { featureId: 'receipt-items', label: 'Itemized Receipt Line Items', icon: 'list', live: false, description: 'Inspect itemized charges printed on each customer sales receipt, applied item discounts, seat numbers, and quantity breakdowns.' },
-      { featureId: 'receipt-orders', label: 'Customer Sales Receipts', icon: 'receipt_long', live: false, description: 'Archive of issued customer sales receipts, POS register terminals, settlement tenders, customer copies, and fiscal audit logs.' },
-      { featureId: 'receipt-taxes', label: 'Receipt Tax Line Breakdown', icon: 'percent', live: false, description: 'Detailed breakdown of sales tax brackets, VAT rates, local municipal surcharges, and tax-exempt balances allocated per receipt.' },
+      { featureId: 'receipt-orders', label: 'Customer Sales Receipts', icon: 'receipt_long', live: true, description: 'Issue, lock and audit receipts and invoices: fiscal data, tax exemptions, the activity log and credit / debit notes.' },
+      { featureId: 'receipt-items', label: 'Itemized Receipt Line Items', icon: 'list', live: true, description: 'Inspect the line items printed on each receipt: quantities, unit prices, line discounts and totals recalculated to the cent.' },
+      { featureId: 'receipt-taxes', label: 'Receipt Tax Line Breakdown', icon: 'percent', live: true, description: 'Tax lines charged per receipt or per line item, with the rate, the taxable base and the amount behind each one.' },
+      { featureId: 'billing-financial-sync', label: 'Financial Ledger Sync', icon: 'account_balance', live: true, description: 'Audit how each receipt and its taxes were posted to journal entries, debit/credit lines and ledger accounts.' },
+      { featureId: 'billing-partner-sync', label: 'Business Partners Billing Link', icon: 'partner_exchange', live: true, description: 'Link receipts to customer and supplier profiles, track B2B invoices, corporate credit utilization and outstanding balances.' },
+      {
+        featureId: 'billing-inventory-sync',
+        label: 'Inventory & Billing Stock Sync',
+        icon: 'inventory_2',
+        live: true,
+        description: 'Audit which warehouse stock each receipt line depleted, validate stock before billing, and jump to stock levels without losing billing context.',
+        crossLinks: [
+          { featureId: 'inventory-dashboard', label: 'Products Hub', icon: 'inventory_2' },
+          { featureId: 'raw-materials-dashboard', label: 'Raw Materials Hub', icon: 'warehouse' },
+        ],
+      },
+      { featureId: 'billing-reports', label: 'Billing Reports', icon: 'summarize', live: true, description: 'Tax liability by rate and scope, and the discount & void audit trail, with CSV export and printable layouts.' },
     ],
   },
   {
